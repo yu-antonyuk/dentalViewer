@@ -55,7 +55,7 @@
 				renderer = mainControler.renderer;
 				mainControler.loadSTL("teeth.stl");
 				mainControler.loadPTS("./line.pts");
-				
+                mainControler.initGUI();
 
 				window.addEventListener( 'resize', mainControler.onWindowResize() );
 				mainControler.render();

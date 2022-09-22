@@ -14,6 +14,7 @@ let camera, scene, renderer;
 let fileSTL, filePTC;
 let points;
 let container;
+const splineHelperObjects = [];
 let splinePointsLength = 0;
 const positions = [];
 const point = new THREE.Vector3();
@@ -44,7 +45,7 @@ export function initBase() {
 
     initA()
     initGrid();
-    initGUI();
+
 
 }
 
@@ -59,7 +60,7 @@ export function initGrid() {
 
 export function initGUI(){
 
-	gui.add( params, 'trashold', 0, 1 ).step( 0.01 ).onChange(render);
+	gui.add( params, 'trashold', 0, 5 ).step( 1 ).onChange(render);
 	gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function ( value ) {
 
 	    trashold = value;
@@ -105,20 +106,9 @@ export function initA() {
     controls.maxDistance = 150;
     controls.target.set(0, -0.25, 0);
     controls.update();
-    transformControl = new TransformControls( camera, renderer.domElement );
-	transformControl.addEventListener( 'change', render );
-	transformControl.addEventListener( 'dragging-changed', function ( event ) {
 
-	controls.enabled = ! event.value;
-
-	} );
-	scene.add( transformControl );
-    transformControl.addEventListener( 'objectChange', function () {
-
-        updateSplineOutline();
-
-    } );
 }
+
 
 
 export function onWindowResize() {
@@ -144,7 +134,7 @@ export function getCamera(){
     return camera;
 }
 
-function addShadowedLight( x, y, z, color, intensity ) {
+export function addShadowedLight( x, y, z, color, intensity ) {
 
     const directionalLight = new THREE.DirectionalLight( color, intensity );
     directionalLight.position.set( x, y, z );
@@ -177,8 +167,10 @@ export function loadPTS(file){
         const material = new THREE.PointsMaterial( { size: 0.5, color: 0x0C2AAC} );
 
         points = new THREE.Points( geometry, material );
+        filePTC = points;
         points.rotation.set(- Math.PI / 2, 0, 0 );
-
+        points.position.set(-1, 20, 1 );
+        
         scene.add( points );
         console.log(points);
 
@@ -204,5 +196,4 @@ export function loadSTL(file){
 
     } );
 }
-
 
