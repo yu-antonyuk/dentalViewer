@@ -4,6 +4,7 @@ import { OrbitControls } from './threejs/examples/jsm/controls/OrbitControls.js'
 import { GLTFLoader } from './threejs/examples/jsm/loaders/GLTFLoader.js';
 import { KTX2Loader } from './threejs/examples/jsm/loaders/KTX2Loader.js';
 import { MeshoptDecoder } from './threejs/examples/jsm/libs/meshopt_decoder.module.js';
+import { STLLoader } from './threejs/examples/jsm/loaders/STLLoader.js';
 
 
 let camera, scene, renderer;
@@ -50,39 +51,38 @@ export function initA() {
     scene.background = new THREE.Color(0xbbbbbb);
     scene.environment = pmremGenerator.fromScene(environment).texture;
     environment.dispose();
+    addShadowedLight( 1, 1, 1, 0xffffff, 1 );
+    addShadowedLight( -0.5, 1, - 1, 0xffffff, 0.5 );
 
-    const ktx2Loader = new KTX2Loader()
-        .setTranscoderPath('./threejs/examples/js/libs/basis/')
-        .detectSupport(renderer);
-
-    const loader = new GLTFLoader().setPath('./threejs/examples/models/gltf/');
-    loader.setKTX2Loader(ktx2Loader);
-    loader.setMeshoptDecoder(MeshoptDecoder);
-    loader.load('Horse.glb', function(gltf) {
-
-        // coffeemat.glb was produced from the source scene using gltfpack:
-        // gltfpack -i coffeemat/scene.gltf -o coffeemat.glb -cc -tc
-        // The resulting model uses EXT_meshopt_compression (for geometry) and KHR_texture_basisu (for texture compression using ETC1S/BasisLZ)
-
-        gltf.scene.position.y = 8;
-
-        scene.add(gltf.scene);
-
-        render();
-
-    });
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.addEventListener('change', render); // use if there is no animation loop
-    controls.minDistance = 400;
+    controls.minDistance = 25;
     controls.maxDistance = 1000;
-    controls.target.set(10, 90, -16);
+    controls.target.set(0, -0.25, 0);
     controls.update();
-
-    window.addEventListener('resize', onWindowResize);
-
 }
 
+export function loadSTL(file){
+    // Binary files
+    const loader = new STLLoader();
+    const material = new THREE.MeshPhongMaterial( { color: 0xAAAAAA, specular: 0x111111, shininess: 20} );
+
+    loader.load(file, function ( geometry ) {
+
+        const mesh = new THREE.Mesh( geometry, material );
+
+        mesh.position.set( 0, 0, 0 );
+        mesh.rotation.set(- Math.PI / 2, 0, 0 );
+        mesh.scale.set( 1, 1, 1 );
+
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+
+        scene.add( mesh );
+
+    } );
+}
 export function onWindowResize() {
 
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -100,4 +100,50 @@ export function render() {
 
     renderer.render(scene, camera);
 
+}
+
+export function getCamera(){
+    return camera;
+}
+
+function addShadowedLight( x, y, z, color, intensity ) {
+
+    const directionalLight = new THREE.DirectionalLight( color, intensity );
+    directionalLight.position.set( x, y, z );
+    scene.add( directionalLight );
+
+    directionalLight.castShadow = true;
+
+    const d = 1;
+    directionalLight.shadow.camera.left = - d;
+    directionalLight.shadow.camera.right = d;
+    directionalLight.shadow.camera.top = d;
+    directionalLight.shadow.camera.bottom = - d;
+
+    directionalLight.shadow.camera.near = 1;
+    directionalLight.shadow.camera.far = 4;
+
+    directionalLight.shadow.bias = - 0.002;
+
+}
+
+export function loadPTS(file){
+    // Binary files
+    const loader = new STLLoader();
+    const material = new THREE.MeshPhongMaterial( { color: 0xAAAAAA, specular: 0x111111, shininess: 20} );
+
+    loader.load(file, function ( geometry ) {
+
+        const mesh = new THREE.Mesh( geometry, material );
+
+        mesh.position.set( 0, 0, 0 );
+        mesh.rotation.set(- Math.PI / 2, 0, 0 );
+        mesh.scale.set( 1, 1, 1 );
+
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+
+        scene.add( mesh );
+
+    } );
 }

@@ -38,6 +38,8 @@
 			import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 			let camera, scene, renderer;
+			let fileSTL, filePTC;
+
 
 			init();
 
@@ -47,8 +49,20 @@
 				document.body.appendChild( container );
 
 				mainControler.initBase();
+				camera = mainControler.camera;
+				scene = mainControler.scene;
+				renderer = mainControler.renderer;
+				mainControler.loadSTL("teeth.stl");
+				
+
+				window.addEventListener( 'resize', mainControler.onWindowResize() );
+				mainControler.render();
+
 				
 			}
+
+
+			console.log(mainControler.getCamera().position);
 
 
 		</script>
