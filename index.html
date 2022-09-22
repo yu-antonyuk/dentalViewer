@@ -39,6 +39,7 @@
 
 			let camera, scene, renderer;
 			let fileSTL, filePTC;
+            let container;
 
 
 			init();
@@ -53,6 +54,7 @@
 				scene = mainControler.scene;
 				renderer = mainControler.renderer;
 				mainControler.loadSTL("teeth.stl");
+				mainControler.loadPTS("./line.pts");
 				
 
 				window.addEventListener( 'resize', mainControler.onWindowResize() );
