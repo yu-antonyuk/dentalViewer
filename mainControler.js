@@ -14,14 +14,13 @@ let camera, scene, renderer;
 let meshList = [];
 let fileSTL, filePTC;
 let points, orbit, control;
+let milliseconds = 0;
 let container;
-const splineHelperObjects = [];
-let splinePointsLength = 0;
+let tempSelect;
 const positions = [];
 const point = new THREE.Vector3();
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2( 1, 1 );
-const pointer = new THREE.Vector2();
+var raycaster = new THREE.Raycaster();
+var cursor = new THREE.Vector2();
 const onUpPosition = new THREE.Vector2();
 const onDownPosition = new THREE.Vector2();
 const geometry = new THREE.BoxGeometry(10, 10, 10);
@@ -46,12 +45,14 @@ export function initBase() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
+    raycaster = new THREE.Raycaster();
     initGrid();
-    initA();
+    initRender();
     initKeyBoard();
     initTControl();
 
     initCamera();
+
 }
 
 export function initGrid() {
@@ -74,17 +75,17 @@ export function initGUI() {
 
     });
     gui.add(params, 'centripetal').onChange(render);
-    gui.add(params, 'editingSTL').onChange(function (){
+    gui.add(params, 'editingSTL').onChange(function () {
         enablingTControl(meshList[0], params.editingSTL)
     });
-    gui.add(params, 'editingPTS').onChange(function (){
+    gui.add(params, 'editingPTS').onChange(function () {
         enablingTControl(meshList[1], params.editingPTS)
     });
     gui.open();
 
 }
 
-export function initA() {
+export function initRender() {
     container = document.createElement('div');
     document.body.appendChild(container);
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -103,6 +104,8 @@ export function initA() {
     addShadowedLight(1, 1, 1, 0xf0f0f0, 1);
     addShadowedLight(-0.5, 1, - 1, 0xf0f0f0, 0.5);
 
+    renderer.domElement.addEventListener("mousedown", onMouseDown, false);
+    renderer.domElement.addEventListener("mouseup", onMouseUp, false);
 }
 export function initCamera() {
     orbit = new OrbitControls(camera, renderer.domElement);
@@ -131,7 +134,7 @@ export function enablingTControl(obj, bool) {
         control.setSize(0.6)
         control.attach(obj);
         console.log("contrlesr for STL is added")
-    }else{
+    } else {
         scene.remove(control);
         console.log("contrler was removed")
     }
@@ -144,6 +147,7 @@ export function onWindowResize() {
     render();
 }
 export function render() {
+
     renderer.render(scene, camera);
 }
 export function getCamera() {
@@ -280,11 +284,57 @@ export function getMeshList() {
     return meshList;
 }
 
-export function raycasting(){
-    var mesh = new THREE.InstancedMesh( geometry);
-    raycaster.setFromCamera( mouse, camera );
+export function raycast(e) {
 
-				const intersection = raycaster.intersectObject( mesh );
+    cursor.x = (e.clientX / window.innerWidth) * 2 - 1;
+    cursor.y = - (e.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(cursor, camera)
+    var tempColor = null;
 
-                console.log("intersection");
+    renderer.domElement.addEventListener('click', raycaster, true);
+    console.log(cursor);
+    // calculate objects intersecting the picking ray
+
+    try {
+        const intersects = raycaster.intersectObjects(meshList);
+        if (intersects[0].object != tempSelect) {
+            tempColor = intersects[0].object.material.color;
+            intersects[0].object.material.color.set(0xff0000);
+            tempSelect = intersects[0].object;
+        }
+        console.log(intersects[0].object);
+
+    } catch (error) {
+        tempSelect = null
+    }
+
+    render();
+}
+
+export function mainTime() {
+    milliseconds=milliseconds+1;
+
+}
+export function onMouseDown() {
+    console.log("click ");
+    milliseconds = 0;
+    setInterval(mainTime, 10);
+}
+export function onMouseUp() {
+    clearInterval(mainTime);
+    if (milliseconds <= 100) {
+        checkMousClick();
+
+        console.log("click " + milliseconds);
+    } if(100 < milliseconds <= 200) {
+        console.log("longclick " + milliseconds);
+
+    }else{
+
+    }
+}
+
+export function checkMousClick() {
+    var bool = true
+    return bool;
 }
