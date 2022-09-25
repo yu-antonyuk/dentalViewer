@@ -11,18 +11,20 @@ import { TransformControls } from './threejs/examples/jsm/controls/TransformCont
 
 
 let camera, scene, renderer;
+let meshList = [];
 let fileSTL, filePTC;
-let points;
+let points, orbit, control;
 let container;
 const splineHelperObjects = [];
 let splinePointsLength = 0;
 const positions = [];
 const point = new THREE.Vector3();
 const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2( 1, 1 );
 const pointer = new THREE.Vector2();
 const onUpPosition = new THREE.Vector2();
 const onDownPosition = new THREE.Vector2();
-const geometry = new THREE.BoxGeometry( 10, 10, 10 );
+const geometry = new THREE.BoxGeometry(10, 10, 10);
 let transformControl;
 let ARC_SEGMENTS = 200;
 const splines = {};
@@ -33,6 +35,8 @@ const params = {
     trashold: 0,
     tension: 0.5,
     centripetal: true,
+    editingSTL: false,
+    editingPTS: false,
 
 };
 
@@ -42,11 +46,12 @@ export function initBase() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
-
-    initA()
     initGrid();
+    initA();
+    initKeyBoard();
+    initTControl();
 
-
+    initCamera();
 }
 
 export function initGrid() {
@@ -58,142 +63,228 @@ export function initGrid() {
 
 }
 
-export function initGUI(){
+export function initGUI() {
 
-	gui.add( params, 'trashold', 0, 5 ).step( 1 ).onChange(render);
-	gui.add( params, 'tension', 0, 1 ).step( 0.01 ).onChange( function ( value ) {
+    gui.add(params, 'trashold', 0, 5).step(1).onChange(render);
+    gui.add(params, 'tension', 0, 1).step(0.01).onChange(function (value) {
 
-	    trashold = value;
-	    updateSplineOutline();
-	    render();
+        trashold = value;
+        updateSplineOutline();
+        render();
 
-	    } );
-				gui.add( params, 'centripetal' ).onChange( render );
-				gui.open();
+    });
+    gui.add(params, 'centripetal').onChange(render);
+    gui.add(params, 'editingSTL').onChange(function (){
+        enablingTControl(meshList[0], params.editingSTL)
+    });
+    gui.add(params, 'editingPTS').onChange(function (){
+        enablingTControl(meshList[1], params.editingPTS)
+    });
+    gui.open();
 
 }
 
 export function initA() {
-
     container = document.createElement('div');
     document.body.appendChild(container);
-
-
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
     renderer.outputEncoding = THREE.sRGBEncoding;
     container.appendChild(renderer.domElement);
-
-    camera.position.set(0, 100, 0);
-
+    camera.position.set(50, 60, -50);
     const environment = new RoomEnvironment();
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    scene.add( new THREE.AmbientLight( 0xe5e5e5, 0.15 ) );
+    scene.add(new THREE.AmbientLight(0xe5e5e5, 0.15));
     scene.background = new THREE.Color(0xbbbbbb);
     scene.environment = pmremGenerator.fromScene(environment).texture;
     environment.dispose();
-    addShadowedLight( 1, 1, 1, 0xf0f0f0, 1 );
-    addShadowedLight( -0.5, 1, - 1, 0xf0f0f0, 0.5 );
-
-
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.damping = 0.2;
-    controls.addEventListener('change', render); // use if there is no animation loop
-
-    controls.minDistance = 25;
-    controls.maxDistance = 150;
-    controls.target.set(0, -0.25, 0);
-    controls.update();
+    addShadowedLight(1, 1, 1, 0xf0f0f0, 1);
+    addShadowedLight(-0.5, 1, - 1, 0xf0f0f0, 0.5);
 
 }
+export function initCamera() {
+    orbit = new OrbitControls(camera, renderer.domElement);
+    orbit.damping = 0.2;
+    orbit.update();
+    orbit.addEventListener('change', render); // use if there is no animation loop
+    orbit.minDistance = 25;
+    orbit.maxDistance = 150;
+    orbit.target.set(0, -0.25, 0);
+    orbit.update();
+}
+export function initTControl() {
+    control = new TransformControls(camera, renderer.domElement);
+    control.addEventListener('change', render);
+    control.addEventListener('dragging-changed', function (event) {
 
+        orbit.enabled = !event.value;
 
+    });
+    return control;
 
+}
+export function enablingTControl(obj, bool) {
+    if (bool) {
+        scene.add(control);
+        control.setSize(0.6)
+        control.attach(obj);
+        console.log("contrlesr for STL is added")
+    }else{
+        scene.remove(control);
+        console.log("contrler was removed")
+    }
+    render();
+}
 export function onWindowResize() {
-
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-
     renderer.setSize(window.innerWidth, window.innerHeight);
-
     render();
-
 }
-
-//
-
 export function render() {
-
     renderer.render(scene, camera);
-
 }
-
-export function getCamera(){
+export function getCamera() {
     return camera;
 }
+export function addShadowedLight(x, y, z, color, intensity) {
 
-export function addShadowedLight( x, y, z, color, intensity ) {
-
-    const directionalLight = new THREE.DirectionalLight( color, intensity );
-    directionalLight.position.set( x, y, z );
-    scene.add( directionalLight );
-
+    const directionalLight = new THREE.DirectionalLight(color, intensity);
+    directionalLight.position.set(x, y, z);
+    scene.add(directionalLight);
     directionalLight.castShadow = true;
-
     const d = 1;
     directionalLight.shadow.camera.left = - d;
     directionalLight.shadow.camera.right = d;
     directionalLight.shadow.camera.top = d;
     directionalLight.shadow.camera.bottom = - d;
-
     directionalLight.shadow.camera.near = 1;
     directionalLight.shadow.camera.far = 4;
-
     directionalLight.shadow.bias = - 0.002;
 
 }
-
-export function loadPTS(file){
+export function loadPTS(file) {
     // Binary files
     const loader = new PTSLoader();
-    loader.load( file, function ( geometry ) {
-
+    loader.load(file, function (geometry) {
         geometry.center();
-
-        const vertexColors = ( geometry.hasAttribute( 'color' ) === true );
-
-        const material = new THREE.PointsMaterial( { size: 0.5, color: 0x0C2AAC} );
-
-        points = new THREE.Points( geometry, material );
+        const vertexColors = (geometry.hasAttribute('color') === true);
+        const material = new THREE.PointsMaterial({ size: 0.5, color: 0x0C2AAC });
+        points = new THREE.Points(geometry, material);
+        meshList[1] = points;
         filePTC = points;
-        points.rotation.set(- Math.PI / 2, 0, 0 );
-        points.position.set(-1, 20, 1 );
-        
-        scene.add( points );
+        points.rotation.set(- Math.PI / 2, 0, 0);
+        points.position.set(0, 10, 0);
+        scene.add(points);
         console.log(points);
-
-    } );
+        render();
+    });
 }
-export function loadSTL(file){
+export function loadSTL(file) {
     // Binary files
     const loader = new STLLoader();
-    const material = new THREE.MeshPhongMaterial( { color: 0x919191, specular: 0x111111, shininess: 25} );
+    const material = new THREE.MeshPhongMaterial({ color: 0x919191, specular: 0x111111, shininess: 25 });
 
-    loader.load(file, function ( geometry ) {
+    loader.load(file, function (geometry) {
 
-        const mesh = new THREE.Mesh( geometry, material );
-
-        mesh.position.set( 0, 0, 0 );
-        mesh.rotation.set(- Math.PI / 2, 0, 0 );
-        mesh.scale.set( 1, 1, 1 );
-
+        const mesh = new THREE.Mesh(geometry, material);
+        meshList[0] = mesh;
+        mesh.position.set(0, 0, 0);
+        mesh.rotation.set(- Math.PI / 2, 0, 0);
+        mesh.scale.set(1, 1, 1);
         mesh.castShadow = false;
         mesh.receiveShadow = false;
+        scene.add(mesh);
+        render();
 
-        scene.add( mesh );
+    });
+}
+export function initKeyBoard() {
+    window.addEventListener('keydown', function (event) {
 
-    } );
+        switch (event.keyCode) {
+
+            case 49: // 1
+                console.log(scene);
+                break;
+
+            case 81: // Q
+                control.setSpace(control.space === 'local' ? 'world' : 'local');
+                break;
+
+            case 16: // Shift
+                control.setTranslationSnap(100);
+                control.setRotationSnap(THREE.MathUtils.degToRad(10));
+                control.setScaleSnap(0.25);
+                break;
+
+            case 87: // W
+                control.setMode('translate');
+                break;
+
+            case 69: // E
+                control.setMode('rotate');
+                break;
+
+            case 82: // R
+                control.setMode('scale');
+                break;
+
+            case 107: // +, =, num+
+                control.setSize(control.size + 0.1);
+                break;
+
+            case 109: // -, _, num-
+                control.setSize(Math.max(control.size - 0.1, 0.1));
+                break;
+
+            case 88: // X
+                control.showX = !control.showX;
+                break;
+
+            case 89: // Y
+                control.showY = !control.showY;
+                break;
+
+            case 90: // Z
+                control.showZ = !control.showZ;
+                break;
+
+            case 32: // Spacebar
+                control.enabled = !control.enabled;
+                break;
+
+
+        }
+
+    });
+
+    window.addEventListener('keyup', function (event) {
+
+        switch (event.keyCode) {
+
+            case 16: // Shift
+                control.setTranslationSnap(null);
+                control.setRotationSnap(null);
+                control.setScaleSnap(null);
+                break;
+
+        }
+
+    });
 }
 
+export function getMeshList() {
+    return meshList;
+}
+
+export function raycasting(){
+    var mesh = new THREE.InstancedMesh( geometry);
+    raycaster.setFromCamera( mouse, camera );
+
+				const intersection = raycaster.intersectObject( mesh );
+
+                console.log("intersection");
+}
