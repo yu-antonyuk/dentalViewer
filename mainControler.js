@@ -16,11 +16,12 @@ let fileSTL, filePTC;
 let points, orbit, control;
 let milliseconds = 0;
 let container;
-let tempSelect;
+let tempSelect, raycastArea;
 const positions = [];
 const point = new THREE.Vector3();
 var raycaster = new THREE.Raycaster();
-var cursor = new THREE.Vector2();
+let cursor = new THREE.Vector2();
+let tCursor=new THREE.Vector2();
 const onUpPosition = new THREE.Vector2();
 const onDownPosition = new THREE.Vector2();
 const geometry = new THREE.BoxGeometry(10, 10, 10);
@@ -36,6 +37,7 @@ const params = {
     centripetal: true,
     editingSTL: false,
     editingPTS: false,
+    editingPTS_points: false,
 
 };
 
@@ -46,12 +48,15 @@ export function initBase() {
     camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
     renderer = new THREE.WebGLRenderer({ antialias: true });
     raycaster = new THREE.Raycaster();
+    //initEvents();
     initGrid();
     initRender();
     initKeyBoard();
     initTControl();
 
+    mainTime();
     initCamera();
+    raycastArea = meshList;
 
 }
 
@@ -81,6 +86,9 @@ export function initGUI() {
     gui.add(params, 'editingPTS').onChange(function () {
         enablingTControl(meshList[1], params.editingPTS)
     });
+    gui.add(params, 'editingPTS_points').onChange(function () {
+        enablingTControl(points.geometry.points, params.editingPTS_points)
+    });
     gui.open();
 
 }
@@ -103,9 +111,12 @@ export function initRender() {
     environment.dispose();
     addShadowedLight(1, 1, 1, 0xf0f0f0, 1);
     addShadowedLight(-0.5, 1, - 1, 0xf0f0f0, 0.5);
-
+    
+    
     renderer.domElement.addEventListener("mousedown", onMouseDown, false);
     renderer.domElement.addEventListener("mouseup", onMouseUp, false);
+    renderer.domElement.addEventListener('onClick', raycast, false);
+
 }
 export function initCamera() {
     orbit = new OrbitControls(camera, renderer.domElement);
@@ -211,7 +222,7 @@ export function initKeyBoard() {
         switch (event.keyCode) {
 
             case 49: // 1
-                console.log(scene);
+                console.log(milliseconds);
                 break;
 
             case 81: // Q
@@ -279,7 +290,6 @@ export function initKeyBoard() {
 
     });
 }
-
 export function getMeshList() {
     return meshList;
 }
@@ -290,51 +300,59 @@ export function raycast(e) {
     cursor.y = - (e.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(cursor, camera)
     var tempColor = null;
-
-    renderer.domElement.addEventListener('click', raycaster, true);
-    console.log(cursor);
+    //renderer.domElement.addEventListener('onClick', raycaster, true);
+    //console.log("cursor",cursor);
     // calculate objects intersecting the picking ray
 
-    try {
-        const intersects = raycaster.intersectObjects(meshList);
-        if (intersects[0].object != tempSelect) {
+   
+        const intersects = raycaster.intersectObjects(raycastArea);
+        /*if (intersects[0].object != tempSelect) {
             tempColor = intersects[0].object.material.color;
             intersects[0].object.material.color.set(0xff0000);
             tempSelect = intersects[0].object;
-        }
-        console.log(intersects[0].object);
+        }*/
+        console.log(intersects[0]);
 
-    } catch (error) {
-        tempSelect = null
-    }
 
     render();
 }
 
 export function mainTime() {
-    milliseconds=milliseconds+1;
-
+    if(milliseconds >=2000){
+        milliseconds = 0;
+    }
+    setInterval(function(){milliseconds++}, 10);
 }
 export function onMouseDown() {
-    console.log("click ");
     milliseconds = 0;
-    setInterval(mainTime, 10);
+ 
 }
-export function onMouseUp() {
-    clearInterval(mainTime);
-    if (milliseconds <= 100) {
-        checkMousClick();
+export function onMouseUp(e) {
 
-        console.log("click " + milliseconds);
-    } if(100 < milliseconds <= 200) {
-        console.log("longclick " + milliseconds);
-
+    if(milliseconds<=33){
+        console.log("clickEvent");
+        onMousClick(e);
+    }if(milliseconds>34 && milliseconds<120){
+       console.log("longClickEvent");
     }else{
-
+        onMousClickEnd(e);
     }
 }
+export function onMousClick(e) {
 
-export function checkMousClick() {
     var bool = true
+    let eventonMousClick = new MouseEvent("onClick", {
+        bubbles: true,
+        cancelable: true,
+        clientX: e.clientX,
+        clientY: e.clientY
+      });
+    renderer.domElement.dispatchEvent(eventonMousClick);
+    return bool;
+    
+}
+export function onMousClickEnd(e) {
+    var bool = false
+    //console.log("End onMousClick");
     return bool;
 }
